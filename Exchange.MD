@@ -7,54 +7,54 @@ Common Exchange Online and mail-flow related snippets and references.
 ## ⚠️ Deprecated: Send-MailMessage
 
 **When:** Legacy scripts  
-**Why:** Cmdlet is obsolete and doesn’t support modern auth well
+**Why:** Cmdlet is obsolete and doesn’t support modern auth well.  Use MailKit instead
 
 ```powershell
-# Prereqs
-# Install-Module Microsoft.Graph -Scope CurrentUser
-Connect-MgGraph -Scopes "Mail.Send"
-
-# Original-style inputs
-$Subject           = "Important notification"
-$From              = "sender@domain.com"      # must be a mailbox you can send as
-$EmailAddress      = "user@domain.com"
-$CopyAddress       = "cc@domain.com"
-$BlindCopyAddress  = "bcc@domain.com"
-$Body              = "<p>Hello %displayName%,</p><p>This is a test.</p>"
-
-# Token replacement (same intent as original)
-$Body = $Body.Replace("%displayName%", $ADObject.DisplayName)
-
-# Modern Graph equivalent of $mailSettings
 $mailSettings = @{
-    Message = @{
-        Subject = $Subject
-        Importance = "High"   # replaces Priority = High
-        Body = @{
-            ContentType = "HTML"
-            Content     = $Body
-        }
-        ToRecipients = @(
-            @{ EmailAddress = @{ Address = $EmailAddress } }
-        )
-        CcRecipients = @(
-            @{ EmailAddress = @{ Address = $CopyAddress } }
-        )
-        BccRecipients = @(
-            @{ EmailAddress = @{ Address = $BlindCopyAddress } }
-        )
-    }
-    SaveToSentItems = $true
+    Subject    = $Subject
+    From       = $From
+    SmtpServer = $smtpRelay
+    Port       = 25
+    EnableSsl  = $false
+    To         = $EmailAddress
+    Cc         = $CopyAddress
+    Bcc        = $BlindCopyAddress
+    Body       = $Body
+    Priority   = "High"
 }
 
+# token replacement
+$mailSettings.Body = $mailSettings.Body.Replace("%displayName%", $ADObject.DisplayName)
+
+# build message (minimal)
+$msg = [MimeKit.MimeMessage]::new()
+$msg.From.Add($mailSettings.From)
+$msg.To.Add($mailSettings.To)
+if ($mailSettings.Cc)  { $msg.Cc.Add($mailSettings.Cc) }
+if ($mailSettings.Bcc) { $msg.Bcc.Add($mailSettings.Bcc) }
+
+$msg.Subject = $mailSettings.Subject
+$msg.Body = [MimeKit.TextPart]::new("html") {
+    Text = $mailSettings.Body
+}
+
+if ($mailSettings.Priority -eq "High") {
+    $msg.Headers["Importance"] = "high"
+    $msg.Headers["X-Priority"] = "1"
+}
+
+# send
+$smtp = [MailKit.Net.Smtp.SmtpClient]::new()
 try {
-    Send-MgUserMail `
-        -UserId $From `
-        -BodyParameter $mailSettings `
-        -ErrorAction Stop
+    $smtp.Connect($mailSettings.SmtpServer, $mailSettings.Port, $mailSettings.EnableSsl)
+    $smtp.Send($msg)
+    $smtp.Disconnect($true)
 }
 catch {
-    Write-Error "[ERROR] $($_.Exception.Message)"
+    Write-Host "[ERROR] $($_.Exception.Message)"
+}
+finally {
+    $smtp.Dispose()
 }
 ```
 
