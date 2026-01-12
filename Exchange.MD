@@ -1,35 +1,56 @@
-# Exchange Online + Sync'd RElated Items
+# Exchange Online + Hybrid Notes
+
+Common Exchange Online and mail-flow related snippets and references.
 
 ---
-This is deprecated - need to modernize:
 
-```
-        $mailSettings = @{
-            Subject    = $Subject
-            From       = $From
-            SmtpServer = $smtpRelay
-            Encoding   = [text.encoding]::UTF8
-            To         = $EmailAddress
-            Cc         = $CopyAddress
-            Bcc        = $BlindCopyAddress
-            Body       = $Body
-            Priority   = "High"
-        }
+## ⚠️ Deprecated: Send-MailMessage
 
-        $mailSettings.Body = $mailSettings.Body.replace("%displayName%",$ADObject.displayName)
+**When:** Legacy scripts  
+**Why:** Cmdlet is deprecated
 
-        try {
-            Send-MailMessage @mailSettings -BodyAsHtml -ErrorAction Stop
-        } catch {
-            Write-Host "[ERROR] "+$_.Exception.Message
-        }
+Prefer Microsoft Graph `/sendMail` with an app registration.
+
+---
+
+## Check Mailbox Type
+
+**When:** License / object validation  
+**Why:** Identify mailbox class
+
+```powershell
+Get-EXOMailbox user@domain.com |
+  Select DisplayName, RecipientTypeDetails
 ```
 
 ---
 
-In a previous life as a DNS admin I was responsible for mail delivery. Going through my old notes I found a few handy links.
-Mail Header Analyzer
-https://mha.azurewebsites.net
-SPF Tools
-https://dmarcian.com/spf-survey/
-https://vamsoft.com/support/tools/spf-policy-tester
+## Find Mailboxes with Forwarding
+
+**When:** Security review  
+**Why:** Identify mail exfil paths
+
+```powershell
+Get-EXOMailbox -ResultSize Unlimited |
+  Where {$_.ForwardingSmtpAddress} |
+  Select DisplayName, ForwardingSmtpAddress
+```
+
+---
+
+## Message Trace (Last 24 Hours)
+
+**When:** Mail delivery troubleshooting  
+**Why:** Validate transport flow
+
+```powershell
+Get-MessageTrace -StartDate (Get-Date).AddHours(-24) -EndDate (Get-Date)
+```
+
+---
+
+## Mail Diagnostics Links
+
+- https://mha.azurewebsites.net
+- https://dmarcian.com/spf-survey/
+- https://vamsoft.com/support/tools/spf-policy-tester
