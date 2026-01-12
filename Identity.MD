@@ -1,20 +1,52 @@
-# Identity Related
+# Identity Related Snippets
 
-```
-$initialPW = $null
-$initialPW += -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 45)
+Snippets related to Active Directory, identity objects, and identifier manipulation.
+
+---
+
+## Random Password Generator (Long)
+
+**When:** Initial or break-glass passwords  
+**Why:** High-entropy generation
+
+```powershell
+$initialPW = -join (
+ 'abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() |
+ Get-Random -Count 45
+)
 ```
 
-```
-$UserObject = Get-ADUser "CN=User1,OU=Corp.Users,DC=itsrob,DC=local" -server dc1.itsrob.local
-$UserObjectGuid = $UserObject.ObjectGUID
-$UserObjectGuidBase64 = [System.Convert]::ToBase64String($UserObjectGuid.ToByteArray())
-write-host
-write-host $UserObjectGuidBase64
+---
+
+## AD ObjectGUID → Base64 (ImmutableID)
+
+**When:** Sync / federation troubleshooting  
+**Why:** Required for Entra ID correlation
+
+```powershell
+$user = Get-ADUser user1
+[Convert]::ToBase64String($user.ObjectGUID.ToByteArray())
 ```
 
+---
+
+## Base64 ImmutableID → GUID
+
+**When:** Reverse lookup  
+**Why:** Identify on-prem AD object
+
+```powershell
+[guid]([Convert]::FromBase64String($ImmutableId))
 ```
-$DN = $ADObject.distinguishedName
-$Domain = $DN -Split "," | ? {$_ -like "DC=*"}
-$Domain = $Domain -join "." -replace ("DC=", ""
+
+---
+
+## Extract Domain from Distinguished Name
+
+**When:** Parsing DNs  
+**Why:** Build domain strings dynamically
+
+```powershell
+$DN = $ADObject.DistinguishedName
+($DN -split "," | Where-Object {$_ -like "DC=*"} ) -replace "DC=" -join "."
 ```
