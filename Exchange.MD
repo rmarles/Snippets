@@ -9,7 +9,54 @@ Common Exchange Online and mail-flow related snippets and references.
 **When:** Legacy scripts  
 **Why:** Cmdlet is obsolete and doesn’t support modern auth well
 
-Prefer Microsoft Graph `sendMail` via Graph PowerShell (`Send-MgUserMail`).
+```powershell
+# Prereqs
+# Install-Module Microsoft.Graph -Scope CurrentUser
+Connect-MgGraph -Scopes "Mail.Send"
+
+# Original-style inputs
+$Subject           = "Important notification"
+$From              = "sender@domain.com"      # must be a mailbox you can send as
+$EmailAddress      = "user@domain.com"
+$CopyAddress       = "cc@domain.com"
+$BlindCopyAddress  = "bcc@domain.com"
+$Body              = "<p>Hello %displayName%,</p><p>This is a test.</p>"
+
+# Token replacement (same intent as original)
+$Body = $Body.Replace("%displayName%", $ADObject.DisplayName)
+
+# Modern Graph equivalent of $mailSettings
+$mailSettings = @{
+    Message = @{
+        Subject = $Subject
+        Importance = "High"   # replaces Priority = High
+        Body = @{
+            ContentType = "HTML"
+            Content     = $Body
+        }
+        ToRecipients = @(
+            @{ EmailAddress = @{ Address = $EmailAddress } }
+        )
+        CcRecipients = @(
+            @{ EmailAddress = @{ Address = $CopyAddress } }
+        )
+        BccRecipients = @(
+            @{ EmailAddress = @{ Address = $BlindCopyAddress } }
+        )
+    }
+    SaveToSentItems = $true
+}
+
+try {
+    Send-MgUserMail `
+        -UserId $From `
+        -BodyParameter $mailSettings `
+        -ErrorAction Stop
+}
+catch {
+    Write-Error "[ERROR] $($_.Exception.Message)"
+}
+```
 
 ---
 
