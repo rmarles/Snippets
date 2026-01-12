@@ -59,3 +59,23 @@ Get-CimInstance Win32_ComputerSystem |
 Get-BitLockerVolume |
   Select MountPoint, VolumeStatus, ProtectionStatus
 ```
+
+---
+
+# Troubleshooting
+
+## CIM/WMI Queries Failing
+
+**When:** CIM commands error or return nothing  
+**Why:** Namespace/provider issues, WinRM, permissions
+
+**Checks:**
+- Run PowerShell elevated
+- Confirm WMI service is running (`Winmgmt`)
+- Try a basic query:
+
+```powershell
+Get-CimInstance Win32_OperatingSystem
+```
+
+If remote, confirm WinRM and firewall rules are enabled.

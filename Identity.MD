@@ -50,3 +50,21 @@ $user = Get-ADUser user1
 $DN = $ADObject.DistinguishedName
 ($DN -split "," | Where-Object {$_ -like "DC=*"} ) -replace "DC=" -join "."
 ```
+
+---
+
+# Troubleshooting
+
+## "Empty" AD Results
+
+**When:** Expected attributes missing  
+**Why:** AD cmdlets don’t return non-default properties unless requested
+
+```powershell
+Get-ADUser user1 -Properties *
+```
+
+Prefer requesting only what you need:
+```powershell
+Get-ADUser user1 -Properties ObjectGUID, mail, proxyAddresses
+```
